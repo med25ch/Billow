@@ -1,6 +1,5 @@
 package com.tamersarioglu.flowpay.data.repository
 
-import com.tamersarioglu.flowpay.data.database.BillingInterval
 import com.tamersarioglu.flowpay.data.database.paymenthistory.MonthlySpendingResult
 import com.tamersarioglu.flowpay.data.database.paymenthistory.PaymentHistoryDao
 import com.tamersarioglu.flowpay.data.database.subcription.Subscription
@@ -12,13 +11,13 @@ import com.tamersarioglu.flowpay.domain.model.MonthlySpending
 import com.tamersarioglu.flowpay.domain.model.SpendingTrend
 import com.tamersarioglu.flowpay.domain.model.UpcomingPayment
 import com.tamersarioglu.flowpay.domain.repository.SubscriptionRepository
+import com.tamersarioglu.flowpay.domain.util.BillingCalculator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
-import kotlin.collections.take
 
 class SubscriptionRepositoryImpl @Inject constructor(
     private val subscriptionDao: SubscriptionDao,
@@ -65,13 +64,7 @@ class SubscriptionRepositoryImpl @Inject constructor(
         val activeSubscriptions = subscriptionDao.getActiveSubscriptions().first()
 
         val totalMonthlySpend = activeSubscriptions.sumOf { subscription ->
-            when (subscription.billingInterval) {
-                BillingInterval.WEEKLY -> subscription.price * 4.33
-                BillingInterval.MONTHLY -> subscription.price
-                BillingInterval.QUARTERLY -> subscription.price / 3
-                BillingInterval.YEARLY -> subscription.price / 12
-                BillingInterval.CUSTOM -> subscription.price * (30.0 / subscription.customIntervalDays)
-            }
+            BillingCalculator.calculateMonthlyAmount(subscription)
         }
 
         return AnalyticsData(
@@ -94,6 +87,8 @@ class SubscriptionRepositoryImpl @Inject constructor(
             spendingTrend = calculateSpendingTrend(monthlySpending)
         )
     }
+
+
 
     private fun calculateSpendingTrend(monthlyData: List<MonthlySpendingResult>): SpendingTrend {
         if (monthlyData.size < 3) return SpendingTrend.STABLE

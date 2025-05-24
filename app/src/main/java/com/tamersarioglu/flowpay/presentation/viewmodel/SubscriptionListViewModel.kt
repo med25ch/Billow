@@ -2,10 +2,10 @@ package com.tamersarioglu.flowpay.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.tamersarioglu.flowpay.data.database.BillingInterval
 import com.tamersarioglu.flowpay.data.database.subcription.Subscription
 import com.tamersarioglu.flowpay.domain.repository.SubscriptionRepository
 import com.tamersarioglu.flowpay.domain.usecase.GetActiveSubscriptionsUseCase
+import com.tamersarioglu.flowpay.domain.util.BillingCalculator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -58,13 +58,7 @@ class SubscriptionListViewModel @Inject constructor(
 
     private fun calculateTotalMonthlySpend(subscriptions: List<Subscription>): Double {
         return subscriptions.sumOf { subscription ->
-            when (subscription.billingInterval) {
-                BillingInterval.WEEKLY -> subscription.price * 4.33
-                BillingInterval.MONTHLY -> subscription.price
-                BillingInterval.QUARTERLY -> subscription.price / 3
-                BillingInterval.YEARLY -> subscription.price / 12
-                BillingInterval.CUSTOM -> subscription.price * (30.0 / subscription.customIntervalDays)
-            }
+            BillingCalculator.calculateMonthlyAmount(subscription)
         }
     }
 }

@@ -1,27 +1,63 @@
 package com.tamersarioglu.flowpay.presentation.ui
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import android.annotation.SuppressLint
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Subscriptions
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tamersarioglu.flowpay.data.database.subcription.Subscription
+import com.tamersarioglu.flowpay.presentation.ui.components.CategoryIndicator
+import com.tamersarioglu.flowpay.presentation.ui.components.EmptyStateCard
+import com.tamersarioglu.flowpay.presentation.ui.components.LoadingCard
+import com.tamersarioglu.flowpay.presentation.ui.components.MetricCard
 import com.tamersarioglu.flowpay.presentation.viewmodel.SubscriptionListViewModel
-
 import java.time.format.DateTimeFormatter
 
+@SuppressLint("DefaultLocale")
 @Composable
 fun SubscriptionListScreen(
     onNavigateToAddSubscription: () -> Unit,
@@ -33,20 +69,27 @@ fun SubscriptionListScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(horizontal = 16.dp)
     ) {
         // Header with total spending
-        SpendingHeader(
-            totalMonthlySpend = uiState.totalMonthlySpend,
-            modifier = Modifier.padding(bottom = 16.dp)
+        MetricCard(
+            title = "Monthly Spending",
+            value = "$${String.format("%.2f", uiState.totalMonthlySpend)}",
+            icon = Icons.Default.AttachMoney,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(120.dp)
+                .padding(vertical = 16.dp),
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
         )
 
         // Add subscription button
-        Button(
+        FilledTonalButton(
             onClick = onNavigateToAddSubscription,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
+                .padding(bottom = 24.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.Add,
@@ -58,28 +101,31 @@ fun SubscriptionListScreen(
 
         when {
             uiState.isLoading -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
+                LoadingCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    message = "Loading subscriptions..."
+                )
             }
             uiState.subscriptions.isEmpty() -> {
-                EmptySubscriptionsState(
-                    onAddSubscription = onNavigateToAddSubscription,
-                    modifier = Modifier.fillMaxSize()
+                EmptyStateCard(
+                    title = "No subscriptions yet",
+                    description = "Start tracking your subscriptions to take control of your spending",
+                    icon = Icons.Default.Subscriptions,
+                    actionText = "Add Your First Subscription",
+                    onAction = onNavigateToAddSubscription,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
             else -> {
                 LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(bottom = 16.dp)
                 ) {
                     items(
                         items = uiState.subscriptions,
                         key = { it.id }
                     ) { subscription ->
-                        SubscriptionCard(
+                        ModernSubscriptionCard(
                             subscription = subscription,
                             onEdit = { onNavigateToEditSubscription(subscription.id) },
                             onDelete = { viewModel.deleteSubscription(subscription) },
@@ -98,39 +144,9 @@ fun SubscriptionListScreen(
     }
 }
 
-@Composable
-fun SpendingHeader(
-    totalMonthlySpend: Double,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "Monthly Spending",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-            Text(
-                text = "${String.format("%.2f", totalMonthlySpend)}",
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                fontWeight = FontWeight.Bold
-            )
-        }
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SubscriptionCard(
+fun ModernSubscriptionCard(
     subscription: Subscription,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
@@ -138,41 +154,57 @@ fun SubscriptionCard(
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    Card(
+    ElevatedCard(
         modifier = modifier.fillMaxWidth(),
-        onClick = onEdit
+        onClick = onEdit,
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Category color indicator
-            Box(
-                modifier = Modifier
-                    .size(12.dp)
-                    .background(
+            // Service icon/avatar
+            Surface(
+                color = subscription.category.color.copy(alpha = 0.1f),
+                shape = CircleShape,
+                modifier = Modifier.size(48.dp)
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center
+                ) {
+                    CategoryIndicator(
                         color = subscription.category.color,
-                        shape = CircleShape
+                        size = 16
                     )
-            )
+                }
+            }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(16.dp))
 
             Column(
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
                     text = subscription.name,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.SemiBold
                 )
-                Text(
-                    text = subscription.category.displayName,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = MaterialTheme.shapes.small
+                ) {
+                    Text(
+                        text = subscription.category.displayName,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+                
                 Text(
                     text = "Next billing: ${subscription.nextBillingDate.format(DateTimeFormatter.ofPattern("MMM dd"))}",
                     style = MaterialTheme.typography.bodySmall,
@@ -180,26 +212,43 @@ fun SubscriptionCard(
                 )
             }
 
+            Spacer(modifier = Modifier.width(16.dp))
+
             Column(
-                horizontalAlignment = Alignment.End
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    text = "${String.format("%.2f", subscription.price)}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    text = "$${String.format("%.2f", subscription.price)}",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
                 )
-                Text(
-                    text = subscription.billingInterval.displayName,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                
+                Surface(
+                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                    shape = MaterialTheme.shapes.small
+                ) {
+                    Text(
+                        text = subscription.billingInterval.displayName,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
             }
 
-            IconButton(onClick = { showDeleteDialog = true }) {
+            Spacer(modifier = Modifier.width(8.dp))
+
+            IconButton(
+                onClick = { showDeleteDialog = true },
+                colors = IconButtonDefaults.iconButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error
+                )
+            ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete subscription",
-                    tint = MaterialTheme.colorScheme.error
+                    contentDescription = "Delete subscription"
                 )
             }
         }
@@ -208,14 +257,34 @@ fun SubscriptionCard(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete Subscription") },
-            text = { Text("Are you sure you want to delete ${subscription.name}?") },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = { 
+                Text(
+                    "Delete Subscription",
+                    style = MaterialTheme.typography.headlineSmall
+                ) 
+            },
+            text = { 
+                Text(
+                    "Are you sure you want to delete ${subscription.name}? This action cannot be undone.",
+                    style = MaterialTheme.typography.bodyMedium
+                ) 
+            },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         onDelete()
                         showDeleteDialog = false
-                    }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
                 ) {
                     Text("Delete")
                 }
@@ -226,42 +295,6 @@ fun SubscriptionCard(
                 }
             }
         )
-    }
-}
-
-@Composable
-fun EmptySubscriptionsState(
-    onAddSubscription: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(
-            imageVector = Icons.Default.Subscriptions,
-            contentDescription = null,
-            modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "No subscriptions yet",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = "Start tracking your subscriptions to take control of your spending",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onAddSubscription) {
-            Text("Add Your First Subscription")
-        }
     }
 }
 

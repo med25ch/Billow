@@ -1,25 +1,44 @@
 package com.tamersarioglu.flowpay.presentation.ui
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingFlat
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Analytics
+import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProgressIndicatorDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -30,6 +49,9 @@ import com.tamersarioglu.flowpay.domain.model.CategorySpending
 import com.tamersarioglu.flowpay.domain.model.MonthlySpending
 import com.tamersarioglu.flowpay.domain.model.SpendingTrend
 import com.tamersarioglu.flowpay.domain.model.UpcomingPayment
+import com.tamersarioglu.flowpay.presentation.ui.components.CategoryIndicator
+import com.tamersarioglu.flowpay.presentation.ui.components.LoadingCard
+import com.tamersarioglu.flowpay.presentation.ui.components.MetricCard
 import com.tamersarioglu.flowpay.presentation.viewmodel.AnalyticsViewModel
 import java.time.format.DateTimeFormatter
 
@@ -41,12 +63,10 @@ fun AnalyticsScreen(
 
     when {
         uiState.isLoading -> {
-            Box(
+            LoadingCard(
                 modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
+                message = "Loading analytics..."
+            )
         }
 
         uiState.analyticsData != null -> {
@@ -73,7 +93,7 @@ fun AnalyticsContent(
 ) {
     LazyColumn(
         modifier = modifier.padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         // Overview cards
         item {
@@ -84,7 +104,7 @@ fun AnalyticsContent(
         item {
             MonthlySpendingChart(
                 monthlyData = analyticsData.monthlySpending,
-                modifier = Modifier.height(200.dp)
+                modifier = Modifier.height(220.dp)
             )
         }
 
@@ -92,7 +112,7 @@ fun AnalyticsContent(
         item {
             CategoryBreakdownChart(
                 categoryData = analyticsData.categoryBreakdown,
-                modifier = Modifier.height(300.dp)
+                modifier = Modifier.fillMaxWidth()
             )
         }
 
@@ -119,64 +139,33 @@ fun OverviewCards(
         contentPadding = PaddingValues(horizontal = 0.dp)
     ) {
         item {
-            OverviewCard(
+            MetricCard(
                 title = "Monthly Spend",
-                value = "${String.format("%.2f", analyticsData.totalMonthlySpend)}",
-                icon = Icons.Default.AttachMoney
+                value = "$${String.format("%.2f", analyticsData.totalMonthlySpend)}",
+                icon = Icons.Default.AttachMoney,
+                modifier = Modifier
+                    .width(160.dp)
+                    .height(120.dp)
             )
         }
         item {
-            OverviewCard(
+            MetricCard(
                 title = "Yearly Spend",
-                value = "${String.format("%.2f", analyticsData.totalYearlySpend)}",
-                icon = Icons.Default.CalendarToday
+                value = "$${String.format("%.2f", analyticsData.totalYearlySpend)}",
+                icon = Icons.Default.CalendarToday,
+                modifier = Modifier
+                    .width(160.dp)
+                    .height(120.dp)
             )
         }
         item {
-            OverviewCard(
+            MetricCard(
                 title = "Average Cost",
-                value = "${String.format("%.2f", analyticsData.averageSubscriptionCost)}",
-                icon = Icons.Default.Analytics
-            )
-        }
-    }
-}
-
-@Composable
-fun OverviewCard(
-    title: String,
-    value: String,
-    icon: ImageVector,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier.width(140.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
+                value = "$${String.format("%.2f", analyticsData.averageSubscriptionCost)}",
+                icon = Icons.Default.Analytics,
+                modifier = Modifier
+                    .width(160.dp)
+                    .height(120.dp)
             )
         }
     }
@@ -187,13 +176,17 @@ fun MonthlySpendingChart(
     monthlyData: List<MonthlySpending>,
     modifier: Modifier = Modifier
 ) {
-    Card(modifier = modifier.fillMaxWidth()) {
+    ElevatedCard(
+        modifier = modifier.fillMaxWidth(),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+    ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(20.dp)
         ) {
             Text(
                 text = "Monthly Spending Trend",
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
@@ -242,21 +235,26 @@ fun CategoryBreakdownChart(
     categoryData: List<CategorySpending>,
     modifier: Modifier = Modifier
 ) {
-    Card(modifier = modifier.fillMaxWidth()) {
+    ElevatedCard(
+        modifier = modifier,
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+    ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(20.dp)
         ) {
             Text(
                 text = "Spending by Category",
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
-            Column {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 categoryData.forEach { category ->
                     CategorySpendingItem(
-                        category = category,
-                        modifier = Modifier.padding(vertical = 4.dp)
+                        category = category
                     )
                 }
             }
@@ -273,38 +271,36 @@ fun CategorySpendingItem(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(16.dp)
-                .background(
-                    color = category.category.color,
-                    shape = CircleShape
-                )
+        CategoryIndicator(
+            color = category.category.color,
+            size = 16
         )
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(16.dp))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = category.category.displayName,
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
             )
+            Spacer(modifier = Modifier.height(4.dp))
             LinearProgressIndicator(
-                progress = category.percentage / 100f,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp),
-                color = category.category.color
+                progress = { category.percentage / 100f },
+                modifier = Modifier.fillMaxWidth(),
+                color = category.category.color,
+                trackColor = category.category.color.copy(alpha = 0.2f),
+                strokeCap = ProgressIndicatorDefaults.LinearStrokeCap,
             )
         }
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(16.dp))
 
         Column(horizontalAlignment = Alignment.End) {
             Text(
-                text = "${String.format("%.2f", category.totalAmount)}",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium
+                text = "$${String.format("%.2f", category.totalAmount)}",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
             )
             Text(
                 text = "${String.format("%.1f", category.percentage)}%",
@@ -320,29 +316,34 @@ fun UpcomingPaymentsSection(
     upcomingPayments: List<UpcomingPayment>,
     modifier: Modifier = Modifier
 ) {
-    Card(modifier = modifier.fillMaxWidth()) {
+    ElevatedCard(
+        modifier = modifier.fillMaxWidth(),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+    ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(20.dp)
         ) {
             Text(
                 text = "Upcoming Payments (30 days)",
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
             if (upcomingPayments.isEmpty()) {
                 Text(
                     text = "No upcoming payments",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
                 )
             } else {
-                Column {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     upcomingPayments.take(5).forEach { payment ->
-                        UpcomingPaymentItem(
-                            payment = payment,
-                            modifier = Modifier.padding(vertical = 4.dp)
-                        )
+                        UpcomingPaymentItem(payment = payment)
                     }
                 }
             }
@@ -359,21 +360,18 @@ fun UpcomingPaymentItem(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(12.dp)
-                .background(
-                    color = payment.subscription.category.color,
-                    shape = CircleShape
-                )
+        CategoryIndicator(
+            color = payment.subscription.category.color,
+            size = 12
         )
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(16.dp))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = payment.subscription.name,
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
             )
             Text(
                 text = when (payment.daysUntilPayment) {
@@ -381,19 +379,20 @@ fun UpcomingPaymentItem(
                     1 -> "Tomorrow"
                     else -> "in ${payment.daysUntilPayment} days"
                 },
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
                 color = when {
                     payment.daysUntilPayment <= 1 -> MaterialTheme.colorScheme.error
-                    payment.daysUntilPayment <= 3 -> Color(0xFFFF9800)
+                    payment.daysUntilPayment <= 3 -> MaterialTheme.colorScheme.tertiary
                     else -> MaterialTheme.colorScheme.onSurfaceVariant
                 }
             )
         }
 
         Text(
-            text = "${String.format("%.2f", payment.amount)}",
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium
+            text = "$${String.format("%.2f", payment.amount)}",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
         )
     }
 }
@@ -403,32 +402,46 @@ fun SpendingTrendCard(
     trend: SpendingTrend,
     modifier: Modifier = Modifier
 ) {
-    Card(modifier = modifier.fillMaxWidth()) {
+    ElevatedCard(
+        modifier = modifier.fillMaxWidth(),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+    ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = when (trend) {
-                    SpendingTrend.INCREASING -> Icons.AutoMirrored.Filled.TrendingUp
-                    SpendingTrend.DECREASING -> Icons.AutoMirrored.Filled.TrendingDown
-                    SpendingTrend.STABLE -> Icons.AutoMirrored.Filled.TrendingFlat
+            Surface(
+                color = when (trend) {
+                    SpendingTrend.INCREASING -> MaterialTheme.colorScheme.errorContainer
+                    SpendingTrend.DECREASING -> MaterialTheme.colorScheme.secondaryContainer
+                    SpendingTrend.STABLE -> MaterialTheme.colorScheme.surfaceVariant
                 },
-                contentDescription = null,
-                tint = when (trend) {
-                    SpendingTrend.INCREASING -> MaterialTheme.colorScheme.error
-                    SpendingTrend.DECREASING -> Color(0xFF4CAF50)
-                    SpendingTrend.STABLE -> MaterialTheme.colorScheme.onSurfaceVariant
-                },
-                modifier = Modifier.size(24.dp)
-            )
+                shape = CircleShape,
+                modifier = Modifier.size(48.dp)
+            ) {
+                Icon(
+                    imageVector = when (trend) {
+                        SpendingTrend.INCREASING -> Icons.AutoMirrored.Filled.TrendingUp
+                        SpendingTrend.DECREASING -> Icons.AutoMirrored.Filled.TrendingDown
+                        SpendingTrend.STABLE -> Icons.AutoMirrored.Filled.TrendingFlat
+                    },
+                    contentDescription = null,
+                    tint = when (trend) {
+                        SpendingTrend.INCREASING -> MaterialTheme.colorScheme.onErrorContainer
+                        SpendingTrend.DECREASING -> MaterialTheme.colorScheme.onSecondaryContainer
+                        SpendingTrend.STABLE -> MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(16.dp))
 
             Column {
                 Text(
                     text = "Spending Trend",
-                    style = MaterialTheme.typography.titleSmall
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
                 )
                 Text(
                     text = when (trend) {
@@ -451,22 +464,29 @@ fun ErrorState(
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier,
+        modifier = modifier.padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            imageVector = Icons.Default.Error,
-            contentDescription = null,
-            modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.error
-        )
+        Surface(
+            color = MaterialTheme.colorScheme.errorContainer,
+            shape = CircleShape,
+            modifier = Modifier.size(64.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Error,
+                contentDescription = null,
+                modifier = Modifier.padding(16.dp),
+                tint = MaterialTheme.colorScheme.onErrorContainer
+            )
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
             text = "Something went wrong",
-            style = MaterialTheme.typography.titleLarge
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold
         )
 
         Text(
@@ -474,12 +494,12 @@ fun ErrorState(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp)
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Button(onClick = onRetry) {
+        FilledTonalButton(onClick = onRetry) {
             Icon(Icons.Default.Refresh, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
             Text("Try Again")

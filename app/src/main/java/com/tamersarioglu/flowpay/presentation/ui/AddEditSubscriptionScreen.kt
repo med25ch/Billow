@@ -1,19 +1,49 @@
 package com.tamersarioglu.flowpay.presentation.ui
 
-import androidx.compose.animation.*
-import androidx.compose.foundation.background
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DatePickerState
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -21,6 +51,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tamersarioglu.flowpay.data.database.BillingInterval
 import com.tamersarioglu.flowpay.data.database.subcription.SubscriptionCategory
+import com.tamersarioglu.flowpay.presentation.ui.components.CategoryIndicator
 import com.tamersarioglu.flowpay.presentation.viewmodel.AddEditSubscriptionViewModel
 import java.time.Instant
 import java.time.LocalDate
@@ -151,7 +182,7 @@ fun AddEditSubscriptionScreen(
         )
 
         // Save button
-        Button(
+        FilledTonalButton(
             onClick = viewModel::saveSubscription,
             enabled = !uiState.isSaving,
             modifier = Modifier.fillMaxWidth()
@@ -159,11 +190,15 @@ fun AddEditSubscriptionScreen(
             if (uiState.isSaving) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(16.dp),
-                    strokeWidth = 2.dp
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
                 Spacer(modifier = Modifier.width(8.dp))
             }
-            Text(if (uiState.isEditMode) "Update Subscription" else "Add Subscription")
+            Text(
+                text = if (uiState.isEditMode) "Update Subscription" else "Add Subscription",
+                fontWeight = FontWeight.Medium
+            )
         }
     }
 
@@ -236,13 +271,9 @@ fun CategoryDropdown(
             readOnly = true,
             label = { Text("Category") },
             leadingIcon = {
-                Box(
-                    modifier = Modifier
-                        .size(16.dp)
-                        .background(
-                            color = selectedCategory.color,
-                            shape = CircleShape
-                        )
+                CategoryIndicator(
+                    color = selectedCategory.color,
+                    size = 16
                 )
             },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
@@ -259,13 +290,9 @@ fun CategoryDropdown(
                 DropdownMenuItem(
                     text = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(16.dp)
-                                    .background(
-                                        color = category.color,
-                                        shape = CircleShape
-                                    )
+                            CategoryIndicator(
+                                color = category.color,
+                                size = 16
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(category.displayName)
