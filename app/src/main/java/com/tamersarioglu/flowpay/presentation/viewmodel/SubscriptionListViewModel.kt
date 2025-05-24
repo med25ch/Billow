@@ -7,6 +7,8 @@ import com.tamersarioglu.flowpay.domain.repository.SubscriptionRepository
 import com.tamersarioglu.flowpay.domain.usecase.GetActiveSubscriptionsUseCase
 import com.tamersarioglu.flowpay.domain.util.BillingCalculator
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.collections.immutable.PersistentList
+import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,7 +22,7 @@ class SubscriptionListViewModel @Inject constructor(
     private val repository: SubscriptionRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(SubscriptionListUiState())
+    private val _uiState = MutableStateFlow<SubscriptionListUiState>(SubscriptionListUiState.Loading)
     val uiState: StateFlow<SubscriptionListUiState> = _uiState.asStateFlow()
 
     init {
@@ -31,15 +33,13 @@ class SubscriptionListViewModel @Inject constructor(
         viewModelScope.launch {
             getActiveSubscriptionsUseCase()
                 .catch { exception ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        errorMessage = exception.message
+                    _uiState.value = SubscriptionListUiState.Error(
+                        message = exception.message ?: "Failed to load subscriptions"
                     )
                 }
                 .collect { subscriptions ->
-                    _uiState.value = _uiState.value.copy(
-                        subscriptions = subscriptions,
-                        isLoading = false,
+                    _uiState.value = SubscriptionListUiState.Success(
+                        subscriptions = subscriptions.toPersistentList(),
                         totalMonthlySpend = calculateTotalMonthlySpend(subscriptions)
                     )
                 }
@@ -51,7 +51,9 @@ class SubscriptionListViewModel @Inject constructor(
             try {
                 repository.deleteSubscription(subscription)
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(errorMessage = e.message)
+                _uiState.value = SubscriptionListUiState.Error(
+                    message = "Failed to delete subscription: ${e.message}"
+                )
             }
         }
     }
@@ -61,11 +63,17 @@ class SubscriptionListViewModel @Inject constructor(
             BillingCalculator.calculateMonthlyAmount(subscription)
         }
     }
-}
 
-data class SubscriptionListUiState(
-    val subscriptions: List<Subscription> = emptyList(),
-    val isLoading: Boolean = true,
-    val errorMessage: String? = null,
-    val totalMonthlySpend: Double = 0.0
-)
+    sealed interface SubscriptionListUiState {
+        data object Loading : SubscriptionListUiState
+        
+        data class Success(
+            val subscriptions: PersistentList<Subscription>,
+            val totalMonthlySpend: Double
+        ) : SubscriptionListUiState
+        
+        data class Error(
+            val message: String
+        ) : SubscriptionListUiState
+    }
+}

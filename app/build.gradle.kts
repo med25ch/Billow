@@ -94,4 +94,7 @@ dependencies {
 
     // Icons
     implementation(libs.androidx.material.icons.extended)
+
+    // Immutable Collections
+    implementation(libs.kotlinx.collections.immutable)
 }

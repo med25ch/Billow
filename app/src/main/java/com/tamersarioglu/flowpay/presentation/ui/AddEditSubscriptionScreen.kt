@@ -238,7 +238,7 @@ fun BillingIntervalDropdown(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            BillingInterval.values().forEach { interval ->
+            BillingInterval.entries.forEach { interval ->
                 DropdownMenuItem(
                     text = { Text(interval.displayName) },
                     onClick = {
@@ -286,7 +286,7 @@ fun CategoryDropdown(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            SubscriptionCategory.values().forEach { category ->
+            SubscriptionCategory.entries.forEach { category ->
                 DropdownMenuItem(
                     text = {
                         Row(verticalAlignment = Alignment.CenterVertically) {

@@ -41,9 +41,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,16 +54,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tamersarioglu.flowpay.domain.model.AnalyticsData
 import com.tamersarioglu.flowpay.domain.model.CategorySpending
-import com.tamersarioglu.flowpay.domain.model.MonthlySpending
 import com.tamersarioglu.flowpay.domain.model.SpendingPeriodData
 import com.tamersarioglu.flowpay.domain.model.SpendingTrend
 import com.tamersarioglu.flowpay.domain.model.TimePeriod
 import com.tamersarioglu.flowpay.domain.model.UpcomingPayment
 import com.tamersarioglu.flowpay.presentation.ui.components.CategoryIndicator
 import com.tamersarioglu.flowpay.presentation.ui.components.LoadingCard
-import com.tamersarioglu.flowpay.presentation.ui.components.MetricCard
 import com.tamersarioglu.flowpay.presentation.viewmodel.AnalyticsViewModel
-import java.time.format.DateTimeFormatter
+import kotlinx.collections.immutable.PersistentList
 
 @Composable
 fun AnalyticsScreen(
@@ -74,20 +69,20 @@ fun AnalyticsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    when {
-        uiState.isLoading -> {
+    when (val currentState = uiState) {
+        is AnalyticsViewModel.AnalyticsUiState.Loading -> {
             LoadingCard(
                 modifier = Modifier.fillMaxSize(),
                 message = "Loading analytics..."
             )
         }
 
-        uiState.analyticsData != null -> {
+        is AnalyticsViewModel.AnalyticsUiState.Success -> {
             AnalyticsContent(
-                analyticsData = uiState.analyticsData!!,
-                selectedTimePeriod = uiState.selectedTimePeriod,
-                spendingData = uiState.spendingData,
-                isLoadingSpendingData = uiState.isLoadingSpendingData,
+                analyticsData = currentState.analyticsData,
+                selectedTimePeriod = currentState.selectedTimePeriod,
+                spendingData = currentState.spendingData,
+                isLoadingSpendingData = currentState.isLoadingSpendingData,
                 onTimePeriodChanged = viewModel::updateSelectedTimePeriod,
                 onClearData = viewModel::clearPaymentHistory,
                 onGenerateRandomData = viewModel::generateRandomPaymentHistory,
@@ -95,9 +90,9 @@ fun AnalyticsScreen(
             )
         }
 
-        else -> {
+        is AnalyticsViewModel.AnalyticsUiState.Error -> {
             ErrorState(
-                message = uiState.errorMessage ?: "Failed to load analytics",
+                message = currentState.message,
                 onRetry = viewModel::loadAnalytics,
                 modifier = Modifier.fillMaxSize()
             )
@@ -109,7 +104,7 @@ fun AnalyticsScreen(
 fun AnalyticsContent(
     analyticsData: AnalyticsData,
     selectedTimePeriod: TimePeriod,
-    spendingData: List<SpendingPeriodData>,
+    spendingData: PersistentList<SpendingPeriodData>,
     isLoadingSpendingData: Boolean,
     onTimePeriodChanged: (TimePeriod) -> Unit,
     onClearData: () -> Unit,
@@ -290,7 +285,7 @@ fun EnhancedMetricCard(
                             maxLines = 1
                         )
                     }
-                    
+
                     // Value section
                     Column(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -302,7 +297,7 @@ fun EnhancedMetricCard(
                             color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 1
                         )
-                        
+
                         subtitle?.let {
                             Text(
                                 text = it,
@@ -314,7 +309,7 @@ fun EnhancedMetricCard(
                     }
                 }
             }
-            
+
             // Decorative accent
             Box(
                 modifier = Modifier
@@ -332,7 +327,7 @@ fun EnhancedMetricCard(
 @Composable
 fun SpendingChart(
     selectedTimePeriod: TimePeriod,
-    spendingData: List<SpendingPeriodData>,
+    spendingData: PersistentList<SpendingPeriodData>,
     isLoadingSpendingData: Boolean,
     onTimePeriodChanged: (TimePeriod) -> Unit,
     modifier: Modifier = Modifier
@@ -462,9 +457,10 @@ fun EnhancedBarChart(
             elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Canvas(modifier = Modifier
-                    .fillMaxWidth()
-                    .height(160.dp)
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp)
                 ) {
                     if (data.isNotEmpty() && maxValue > 0) {
                         val barWidth = size.width / data.size * 0.7f
@@ -595,36 +591,49 @@ fun formatPeriodLabel(period: String, timePeriod: TimePeriod): String {
                 if (parts.size >= 3) {
                     val month = parts[1].toInt()
                     val day = parts[2].toInt()
-                    val monthNames = listOf("", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+                    val monthNames = listOf(
+                        "", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+                    )
                     "${monthNames[month]} $day"
                 } else period
-            } catch (e: Exception) { period }
+            } catch (e: Exception) {
+                period
+            }
         }
+
         TimePeriod.WEEK -> {
             // Format: 2024-W03 -> W3
             period.substringAfter("-W").let { "W$it" }
         }
+
         TimePeriod.MONTH -> {
             // Format: 2024-01 -> Jan
             try {
                 val parts = period.split("-")
                 if (parts.size >= 2) {
                     val month = parts[1].toInt()
-                    val monthNames = listOf("", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+                    val monthNames = listOf(
+                        "", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+                    )
                     monthNames[month]
                 } else period
-            } catch (e: Exception) { period }
+            } catch (e: Exception) {
+                period
+            }
         }
+
         TimePeriod.QUARTER -> {
             // Format: 2024-Q1 -> Q1
             period.substringAfter("-")
         }
+
         TimePeriod.HALF_YEAR -> {
             // Format: 2024-H1 -> H1
             period.substringAfter("-")
         }
+
         TimePeriod.YEAR -> {
             // Format: 2024 -> 2024
             period
@@ -634,7 +643,7 @@ fun formatPeriodLabel(period: String, timePeriod: TimePeriod): String {
 
 @Composable
 fun CategoryBreakdownChart(
-    categoryData: List<CategorySpending>,
+    categoryData: PersistentList<CategorySpending>,
     modifier: Modifier = Modifier
 ) {
     ElevatedCard(
@@ -715,7 +724,7 @@ fun CategorySpendingItem(
 
 @Composable
 fun UpcomingPaymentsSection(
-    upcomingPayments: List<UpcomingPayment>,
+    upcomingPayments: PersistentList<UpcomingPayment>,
     modifier: Modifier = Modifier
 ) {
     ElevatedCard(
@@ -738,7 +747,9 @@ fun UpcomingPaymentsSection(
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp)
                 )
             } else {
                 Column(
@@ -869,13 +880,13 @@ fun TimePeriodSelector(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        items(TimePeriod.values().toList()) { period ->
+        items(TimePeriod.entries) { period ->
             val isSelected = period == selectedPeriod
-            
+
             Surface(
-                color = if (isSelected) 
-                    MaterialTheme.colorScheme.primary 
-                else 
+                color = if (isSelected)
+                    MaterialTheme.colorScheme.primary
+                else
                     MaterialTheme.colorScheme.surfaceVariant,
                 shape = MaterialTheme.shapes.small,
                 modifier = Modifier
@@ -888,9 +899,9 @@ fun TimePeriodSelector(
                     text = period.displayName,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                     style = MaterialTheme.typography.labelMedium,
-                    color = if (isSelected) 
-                        MaterialTheme.colorScheme.onPrimary 
-                    else 
+                    color = if (isSelected)
+                        MaterialTheme.colorScheme.onPrimary
+                    else
                         MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
                 )

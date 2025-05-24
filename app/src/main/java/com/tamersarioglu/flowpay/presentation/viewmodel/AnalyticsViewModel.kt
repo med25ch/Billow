@@ -8,6 +8,9 @@ import com.tamersarioglu.flowpay.domain.model.TimePeriod
 import com.tamersarioglu.flowpay.domain.repository.SubscriptionRepository
 import com.tamersarioglu.flowpay.domain.usecase.GetAnalyticsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.collections.immutable.PersistentList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,38 +22,40 @@ class AnalyticsViewModel @Inject constructor(
     private val getAnalyticsUseCase: GetAnalyticsUseCase,
     private val repository: SubscriptionRepository
 ): ViewModel() {
-    private val _uiState = MutableStateFlow(AnalyticsUiState())
+    private val _uiState = MutableStateFlow<AnalyticsUiState>(AnalyticsUiState.Loading)
     val uiState: StateFlow<AnalyticsUiState> = _uiState.asStateFlow()
 
     init {
         loadAnalytics()
-        // Also load spending data immediately
-        loadSpendingData(TimePeriod.MONTH)
     }
 
     fun loadAnalytics() {
         viewModelScope.launch {
             try {
-                _uiState.value = _uiState.value.copy(isLoading = true)
+                _uiState.value = AnalyticsUiState.Loading
                 val analyticsData = getAnalyticsUseCase()
-                _uiState.value = _uiState.value.copy(
+                _uiState.value = AnalyticsUiState.Success(
                     analyticsData = analyticsData,
-                    isLoading = false
+                    selectedTimePeriod = TimePeriod.MONTH,
+                    spendingData = persistentListOf(),
+                    isLoadingSpendingData = false
                 )
                 // Load spending data for current selected period
-                loadSpendingData(_uiState.value.selectedTimePeriod)
+                loadSpendingData(TimePeriod.MONTH)
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    errorMessage = e.message
+                _uiState.value = AnalyticsUiState.Error(
+                    message = e.message ?: "Failed to load analytics"
                 )
             }
         }
     }
 
     fun updateSelectedTimePeriod(timePeriod: TimePeriod) {
-        _uiState.value = _uiState.value.copy(selectedTimePeriod = timePeriod)
-        loadSpendingData(timePeriod)
+        val currentState = _uiState.value
+        if (currentState is AnalyticsUiState.Success) {
+            _uiState.value = currentState.copy(selectedTimePeriod = timePeriod)
+            loadSpendingData(timePeriod)
+        }
     }
 
     // Temporary function for clearing payment history (remove in production)
@@ -61,8 +66,8 @@ class AnalyticsViewModel @Inject constructor(
                 // Reload data after clearing
                 loadAnalytics()
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    errorMessage = "Failed to clear payment history: ${e.message}"
+                _uiState.value = AnalyticsUiState.Error(
+                    message = "Failed to clear payment history: ${e.message}"
                 )
             }
         }
@@ -76,8 +81,8 @@ class AnalyticsViewModel @Inject constructor(
                 // Reload data after generating
                 loadAnalytics()
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    errorMessage = "Failed to generate payment history: ${e.message}"
+                _uiState.value = AnalyticsUiState.Error(
+                    message = "Failed to generate payment history: ${e.message}"
                 )
             }
         }
@@ -86,27 +91,35 @@ class AnalyticsViewModel @Inject constructor(
     private fun loadSpendingData(timePeriod: TimePeriod) {
         viewModelScope.launch {
             try {
-                _uiState.value = _uiState.value.copy(isLoadingSpendingData = true)
-                val spendingData = repository.getSpendingByTimePeriod(timePeriod)
-                _uiState.value = _uiState.value.copy(
-                    spendingData = spendingData,
-                    isLoadingSpendingData = false
-                )
+                val currentState = _uiState.value
+                if (currentState is AnalyticsUiState.Success) {
+                    _uiState.value = currentState.copy(isLoadingSpendingData = true)
+                    val spendingData = repository.getSpendingByTimePeriod(timePeriod)
+                    _uiState.value = currentState.copy(
+                        spendingData = spendingData.toPersistentList(),
+                        isLoadingSpendingData = false
+                    )
+                }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoadingSpendingData = false,
-                    errorMessage = e.message
+                _uiState.value = AnalyticsUiState.Error(
+                    message = e.message ?: "Failed to load spending data"
                 )
             }
         }
     }
 
-    data class AnalyticsUiState(
-        val analyticsData: AnalyticsData? = null,
-        val isLoading: Boolean = true,
-        val errorMessage: String? = null,
-        val selectedTimePeriod: TimePeriod = TimePeriod.MONTH,
-        val spendingData: List<SpendingPeriodData> = emptyList(),
-        val isLoadingSpendingData: Boolean = false
-    )
+    sealed interface AnalyticsUiState {
+        data object Loading : AnalyticsUiState
+        
+        data class Success(
+            val analyticsData: AnalyticsData,
+            val selectedTimePeriod: TimePeriod,
+            val spendingData: PersistentList<SpendingPeriodData>,
+            val isLoadingSpendingData: Boolean
+        ) : AnalyticsUiState
+        
+        data class Error(
+            val message: String
+        ) : AnalyticsUiState
+    }
 }

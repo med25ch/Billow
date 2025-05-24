@@ -14,6 +14,7 @@ import com.tamersarioglu.flowpay.domain.model.TimePeriod
 import com.tamersarioglu.flowpay.domain.model.UpcomingPayment
 import com.tamersarioglu.flowpay.domain.repository.SubscriptionRepository
 import com.tamersarioglu.flowpay.domain.util.BillingCalculator
+import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
@@ -73,7 +74,7 @@ class SubscriptionRepositoryImpl @Inject constructor(
         return AnalyticsData(
             monthlySpending = monthlySpending.map {
                 MonthlySpending(YearMonth.parse(it.month), it.total, 0)
-            },
+            }.toPersistentList(),
             categoryBreakdown = categorySpending.map {
                 CategorySpending(
                     SubscriptionCategory.valueOf(it.category),
@@ -81,12 +82,12 @@ class SubscriptionRepositoryImpl @Inject constructor(
                     it.count,
                     (it.totalAmount / totalMonthlySpend * 100).toFloat()
                 )
-            },
+            }.toPersistentList(),
             totalMonthlySpend = totalMonthlySpend,
             totalYearlySpend = totalMonthlySpend * 12,
             averageSubscriptionCost = if (activeSubscriptions.isNotEmpty())
                 totalMonthlySpend / activeSubscriptions.size else 0.0,
-            nextPayments = getUpcomingPayments(30),
+            nextPayments = getUpcomingPayments(30).toPersistentList(),
             spendingTrend = calculateSpendingTrend(monthlySpending)
         )
     }
