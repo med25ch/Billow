@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +15,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
@@ -25,6 +28,7 @@ import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -35,6 +39,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -47,7 +54,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tamersarioglu.flowpay.domain.model.AnalyticsData
 import com.tamersarioglu.flowpay.domain.model.CategorySpending
 import com.tamersarioglu.flowpay.domain.model.MonthlySpending
+import com.tamersarioglu.flowpay.domain.model.SpendingPeriodData
 import com.tamersarioglu.flowpay.domain.model.SpendingTrend
+import com.tamersarioglu.flowpay.domain.model.TimePeriod
 import com.tamersarioglu.flowpay.domain.model.UpcomingPayment
 import com.tamersarioglu.flowpay.presentation.ui.components.CategoryIndicator
 import com.tamersarioglu.flowpay.presentation.ui.components.LoadingCard
@@ -72,6 +81,10 @@ fun AnalyticsScreen(
         uiState.analyticsData != null -> {
             AnalyticsContent(
                 analyticsData = uiState.analyticsData!!,
+                selectedTimePeriod = uiState.selectedTimePeriod,
+                spendingData = uiState.spendingData,
+                isLoadingSpendingData = uiState.isLoadingSpendingData,
+                onTimePeriodChanged = viewModel::updateSelectedTimePeriod,
                 modifier = Modifier.fillMaxSize()
             )
         }
@@ -89,6 +102,10 @@ fun AnalyticsScreen(
 @Composable
 fun AnalyticsContent(
     analyticsData: AnalyticsData,
+    selectedTimePeriod: TimePeriod,
+    spendingData: List<SpendingPeriodData>,
+    isLoadingSpendingData: Boolean,
+    onTimePeriodChanged: (TimePeriod) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -100,11 +117,14 @@ fun AnalyticsContent(
             OverviewCards(analyticsData = analyticsData)
         }
 
-        // Monthly spending chart
+        // Spending chart with time period selector
         item {
-            MonthlySpendingChart(
-                monthlyData = analyticsData.monthlySpending,
-                modifier = Modifier.height(220.dp)
+            SpendingChart(
+                selectedTimePeriod = selectedTimePeriod,
+                spendingData = spendingData,
+                isLoadingSpendingData = isLoadingSpendingData,
+                onTimePeriodChanged = onTimePeriodChanged,
+                modifier = Modifier.height(280.dp)
             )
         }
 
@@ -172,8 +192,11 @@ fun OverviewCards(
 }
 
 @Composable
-fun MonthlySpendingChart(
-    monthlyData: List<MonthlySpending>,
+fun SpendingChart(
+    selectedTimePeriod: TimePeriod,
+    spendingData: List<SpendingPeriodData>,
+    isLoadingSpendingData: Boolean,
+    onTimePeriodChanged: (TimePeriod) -> Unit,
     modifier: Modifier = Modifier
 ) {
     ElevatedCard(
@@ -184,29 +207,73 @@ fun MonthlySpendingChart(
             modifier = Modifier.padding(20.dp)
         ) {
             Text(
-                text = "Monthly Spending Trend",
+                text = "Spending Trend",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
-            // Simple bar chart implementation
-            SimpleBarChart(
-                data = monthlyData.map { it.totalAmount.toFloat() },
-                labels = monthlyData.map { it.month.format(DateTimeFormatter.ofPattern("MMM")) },
-                modifier = Modifier.fillMaxSize()
+            // Time period selector
+            TimePeriodSelector(
+                selectedPeriod = selectedTimePeriod,
+                onPeriodSelected = onTimePeriodChanged,
+                modifier = Modifier.padding(bottom = 16.dp)
             )
+
+            // Chart with loading state
+            if (isLoadingSpendingData) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(32.dp),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Loading ${selectedTimePeriod.displayName.lowercase()} data...",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else {
+                // Enhanced bar chart implementation
+                EnhancedBarChart(
+                    data = spendingData.map { it.totalAmount.toFloat() },
+                    labels = spendingData.map { formatPeriodLabel(it.period, selectedTimePeriod) },
+                    timePeriod = selectedTimePeriod,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
     }
 }
 
 @Composable
-fun SimpleBarChart(
+fun EnhancedBarChart(
     data: List<Float>,
     labels: List<String>,
+    timePeriod: TimePeriod,
     modifier: Modifier = Modifier
 ) {
-    if (data.isEmpty()) return
+    if (data.isEmpty()) {
+        Box(
+            modifier = modifier,
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "No data available for ${timePeriod.displayName.lowercase()}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        return
+    }
 
     val maxValue = data.maxOrNull() ?: 0f
     val primaryColor = MaterialTheme.colorScheme.primary
@@ -226,6 +293,52 @@ fun SimpleBarChart(
                 topLeft = Offset(x, y),
                 size = Size(barWidth, barHeight)
             )
+        }
+    }
+}
+
+fun formatPeriodLabel(period: String, timePeriod: TimePeriod): String {
+    return when (timePeriod) {
+        TimePeriod.DAY -> {
+            // Format: 2024-01-15 -> Jan 15
+            try {
+                val parts = period.split("-")
+                if (parts.size >= 3) {
+                    val month = parts[1].toInt()
+                    val day = parts[2].toInt()
+                    val monthNames = listOf("", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+                    "${monthNames[month]} $day"
+                } else period
+            } catch (e: Exception) { period }
+        }
+        TimePeriod.WEEK -> {
+            // Format: 2024-W03 -> W3
+            period.substringAfter("-W").let { "W$it" }
+        }
+        TimePeriod.MONTH -> {
+            // Format: 2024-01 -> Jan
+            try {
+                val parts = period.split("-")
+                if (parts.size >= 2) {
+                    val month = parts[1].toInt()
+                    val monthNames = listOf("", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+                    monthNames[month]
+                } else period
+            } catch (e: Exception) { period }
+        }
+        TimePeriod.QUARTER -> {
+            // Format: 2024-Q1 -> Q1
+            period.substringAfter("-")
+        }
+        TimePeriod.HALF_YEAR -> {
+            // Format: 2024-H1 -> H1
+            period.substringAfter("-")
+        }
+        TimePeriod.YEAR -> {
+            // Format: 2024 -> 2024
+            period
         }
     }
 }
@@ -451,6 +564,46 @@ fun SpendingTrendCard(
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun TimePeriodSelector(
+    selectedPeriod: TimePeriod,
+    onPeriodSelected: (TimePeriod) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LazyRow(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(TimePeriod.values().toList()) { period ->
+            val isSelected = period == selectedPeriod
+            
+            Surface(
+                color = if (isSelected) 
+                    MaterialTheme.colorScheme.primary 
+                else 
+                    MaterialTheme.colorScheme.surfaceVariant,
+                shape = MaterialTheme.shapes.small,
+                modifier = Modifier
+                    .selectable(
+                        selected = isSelected,
+                        onClick = { onPeriodSelected(period) }
+                    )
+            ) {
+                Text(
+                    text = period.displayName,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (isSelected) 
+                        MaterialTheme.colorScheme.onPrimary 
+                    else 
+                        MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
                 )
             }
         }

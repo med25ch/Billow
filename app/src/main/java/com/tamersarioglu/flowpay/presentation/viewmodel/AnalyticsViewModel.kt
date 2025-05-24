@@ -3,6 +3,9 @@ package com.tamersarioglu.flowpay.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tamersarioglu.flowpay.domain.model.AnalyticsData
+import com.tamersarioglu.flowpay.domain.model.SpendingPeriodData
+import com.tamersarioglu.flowpay.domain.model.TimePeriod
+import com.tamersarioglu.flowpay.domain.repository.SubscriptionRepository
 import com.tamersarioglu.flowpay.domain.usecase.GetAnalyticsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,7 +16,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class AnalyticsViewModel @Inject constructor(
-    private val getAnalyticsUseCase: GetAnalyticsUseCase
+    private val getAnalyticsUseCase: GetAnalyticsUseCase,
+    private val repository: SubscriptionRepository
 ): ViewModel() {
     private val _uiState = MutableStateFlow(AnalyticsUiState())
     val uiState: StateFlow<AnalyticsUiState> = _uiState.asStateFlow()
@@ -31,6 +35,8 @@ class AnalyticsViewModel @Inject constructor(
                     analyticsData = analyticsData,
                     isLoading = false
                 )
+                // Load spending data for current selected period
+                loadSpendingData(_uiState.value.selectedTimePeriod)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -40,9 +46,35 @@ class AnalyticsViewModel @Inject constructor(
         }
     }
 
+    fun updateSelectedTimePeriod(timePeriod: TimePeriod) {
+        _uiState.value = _uiState.value.copy(selectedTimePeriod = timePeriod)
+        loadSpendingData(timePeriod)
+    }
+
+    private fun loadSpendingData(timePeriod: TimePeriod) {
+        viewModelScope.launch {
+            try {
+                _uiState.value = _uiState.value.copy(isLoadingSpendingData = true)
+                val spendingData = repository.getSpendingByTimePeriod(timePeriod)
+                _uiState.value = _uiState.value.copy(
+                    spendingData = spendingData,
+                    isLoadingSpendingData = false
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoadingSpendingData = false,
+                    errorMessage = e.message
+                )
+            }
+        }
+    }
+
     data class AnalyticsUiState(
         val analyticsData: AnalyticsData? = null,
         val isLoading: Boolean = true,
-        val errorMessage: String? = null
+        val errorMessage: String? = null,
+        val selectedTimePeriod: TimePeriod = TimePeriod.MONTH,
+        val spendingData: List<SpendingPeriodData> = emptyList(),
+        val isLoadingSpendingData: Boolean = false
     )
 }

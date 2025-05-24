@@ -2,6 +2,8 @@ package com.tamersarioglu.flowpay.domain.repository
 
 import com.tamersarioglu.flowpay.data.database.subcription.Subscription
 import com.tamersarioglu.flowpay.domain.model.AnalyticsData
+import com.tamersarioglu.flowpay.domain.model.SpendingPeriodData
+import com.tamersarioglu.flowpay.domain.model.TimePeriod
 import com.tamersarioglu.flowpay.domain.model.UpcomingPayment
 import kotlinx.coroutines.flow.Flow
 
@@ -14,4 +16,5 @@ interface SubscriptionRepository {
     suspend fun deleteSubscription(subscription: Subscription)
     suspend fun getUpcomingPayments(days: Int): List<UpcomingPayment>
     suspend fun getAnalyticsData(): AnalyticsData
+    suspend fun getSpendingByTimePeriod(timePeriod: TimePeriod): List<SpendingPeriodData>
 }
