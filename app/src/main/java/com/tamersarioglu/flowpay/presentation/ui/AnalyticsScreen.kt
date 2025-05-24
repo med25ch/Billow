@@ -1,6 +1,7 @@
 package com.tamersarioglu.flowpay.presentation.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -18,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingFlat
@@ -44,8 +46,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -85,6 +89,8 @@ fun AnalyticsScreen(
                 spendingData = uiState.spendingData,
                 isLoadingSpendingData = uiState.isLoadingSpendingData,
                 onTimePeriodChanged = viewModel::updateSelectedTimePeriod,
+                onClearData = viewModel::clearPaymentHistory,
+                onGenerateRandomData = viewModel::generateRandomPaymentHistory,
                 modifier = Modifier.fillMaxSize()
             )
         }
@@ -106,6 +112,8 @@ fun AnalyticsContent(
     spendingData: List<SpendingPeriodData>,
     isLoadingSpendingData: Boolean,
     onTimePeriodChanged: (TimePeriod) -> Unit,
+    onClearData: () -> Unit,
+    onGenerateRandomData: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -117,6 +125,27 @@ fun AnalyticsContent(
             OverviewCards(analyticsData = analyticsData)
         }
 
+        // Temporary testing buttons (remove in production)
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilledTonalButton(
+                    onClick = onClearData,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("🗑️ Clear Data")
+                }
+                FilledTonalButton(
+                    onClick = onGenerateRandomData,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("📊 Generate Data")
+                }
+            }
+        }
+
         // Spending chart with time period selector
         item {
             SpendingChart(
@@ -124,7 +153,7 @@ fun AnalyticsContent(
                 spendingData = spendingData,
                 isLoadingSpendingData = isLoadingSpendingData,
                 onTimePeriodChanged = onTimePeriodChanged,
-                modifier = Modifier.height(280.dp)
+                modifier = Modifier.height(400.dp)
             )
         }
 
@@ -159,33 +188,142 @@ fun OverviewCards(
         contentPadding = PaddingValues(horizontal = 0.dp)
     ) {
         item {
-            MetricCard(
+            EnhancedMetricCard(
                 title = "Monthly Spend",
                 value = "$${String.format("%.2f", analyticsData.totalMonthlySpend)}",
                 icon = Icons.Default.AttachMoney,
+                gradientColors = listOf(
+                    MaterialTheme.colorScheme.primary,
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                ),
                 modifier = Modifier
-                    .width(160.dp)
-                    .height(120.dp)
+                    .width(180.dp)
+                    .height(140.dp)
             )
         }
         item {
-            MetricCard(
+            EnhancedMetricCard(
                 title = "Yearly Spend",
                 value = "$${String.format("%.2f", analyticsData.totalYearlySpend)}",
                 icon = Icons.Default.CalendarToday,
+                gradientColors = listOf(
+                    MaterialTheme.colorScheme.secondary,
+                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f)
+                ),
                 modifier = Modifier
-                    .width(160.dp)
-                    .height(120.dp)
+                    .width(180.dp)
+                    .height(140.dp)
             )
         }
         item {
-            MetricCard(
+            EnhancedMetricCard(
                 title = "Average Cost",
                 value = "$${String.format("%.2f", analyticsData.averageSubscriptionCost)}",
                 icon = Icons.Default.Analytics,
+                gradientColors = listOf(
+                    MaterialTheme.colorScheme.tertiary,
+                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f)
+                ),
                 modifier = Modifier
-                    .width(160.dp)
-                    .height(120.dp)
+                    .width(180.dp)
+                    .height(140.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun EnhancedMetricCard(
+    title: String,
+    value: String,
+    icon: ImageVector,
+    gradientColors: List<androidx.compose.ui.graphics.Color>,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null
+) {
+    ElevatedCard(
+        modifier = modifier,
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        )
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // Background gradient effect
+            Surface(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(2.dp),
+                color = gradientColors.first().copy(alpha = 0.1f),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // Header with icon and title
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Surface(
+                            color = gradientColors.first().copy(alpha = 0.2f),
+                            shape = CircleShape,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
+                                tint = gradientColors.first(),
+                                modifier = Modifier.padding(6.dp)
+                            )
+                        }
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1
+                        )
+                    }
+                    
+                    // Value section
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = value,
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1
+                        )
+                        
+                        subtitle?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
+            }
+            
+            // Decorative accent
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .height(40.dp)
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(gradientColors.first().copy(alpha = 0.6f))
             )
         }
     }
@@ -261,37 +399,188 @@ fun EnhancedBarChart(
     timePeriod: TimePeriod,
     modifier: Modifier = Modifier
 ) {
-    if (data.isEmpty()) {
-        Box(
-            modifier = modifier,
-            contentAlignment = Alignment.Center
+    Column(modifier = modifier) {
+        if (data.isEmpty()) {
+            // Enhanced empty state with more information
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.elevatedCardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Analytics,
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "No Payment History",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "No ${timePeriod.displayName.lowercase()} spending data available yet.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Add subscriptions or generate test data to see charts.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+            return
+        }
+
+        // Metrics Section
+        ChartMetrics(
+            data = data,
+            timePeriod = timePeriod,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        // Chart Section
+        val maxValue = data.maxOrNull() ?: 0f
+        val primaryColor = MaterialTheme.colorScheme.primary
+
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
         ) {
-            Text(
-                text = "No data available for ${timePeriod.displayName.lowercase()}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            Column(modifier = Modifier.padding(16.dp)) {
+                Canvas(modifier = Modifier
+                    .fillMaxWidth()
+                    .height(160.dp)
+                ) {
+                    if (data.isNotEmpty() && maxValue > 0) {
+                        val barWidth = size.width / data.size * 0.7f
+                        val barSpacing = size.width / data.size * 0.3f
+                        val maxBarHeight = size.height * 0.8f
+
+                        data.forEachIndexed { index, value ->
+                            val barHeight = (value / maxValue) * maxBarHeight
+                            val x = index * (barWidth + barSpacing) + barSpacing / 2
+                            val y = size.height - barHeight
+
+                            drawRect(
+                                color = primaryColor,
+                                topLeft = Offset(x, y),
+                                size = Size(barWidth, barHeight)
+                            )
+                        }
+                    }
+                }
+
+                // Labels Section
+                if (labels.isNotEmpty() && data.size <= 12) { // Show labels only for smaller datasets
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyRow(
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(labels.size) { index ->
+                            Text(
+                                text = labels[index],
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ChartMetrics(
+    data: List<Float>,
+    timePeriod: TimePeriod,
+    modifier: Modifier = Modifier
+) {
+    val total = data.sum()
+    val average = if (data.isNotEmpty()) data.average() else 0.0
+    val maxValue = data.maxOrNull() ?: 0f
+    val minValue = data.minOrNull() ?: 0f
+
+    LazyRow(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            MetricChip(
+                label = "Total",
+                value = "$${String.format("%.0f", total)}",
+                color = MaterialTheme.colorScheme.primary
             )
         }
-        return
+        item {
+            MetricChip(
+                label = "Average",
+                value = "$${String.format("%.0f", average)}",
+                color = MaterialTheme.colorScheme.secondary
+            )
+        }
+        item {
+            MetricChip(
+                label = "Highest",
+                value = "$${String.format("%.0f", maxValue)}",
+                color = MaterialTheme.colorScheme.tertiary
+            )
+        }
+        item {
+            MetricChip(
+                label = "${data.size} ${timePeriod.displayName.lowercase()}s",
+                value = "",
+                color = MaterialTheme.colorScheme.outline
+            )
+        }
     }
+}
 
-    val maxValue = data.maxOrNull() ?: 0f
-    val primaryColor = MaterialTheme.colorScheme.primary
-
-    Canvas(modifier = modifier) {
-        val barWidth = if (data.isNotEmpty()) size.width / data.size * 0.8f else 0f
-        val barSpacing = if (data.isNotEmpty()) size.width / data.size * 0.2f else 0f
-        val maxBarHeight = size.height * 0.8f
-
-        data.forEachIndexed { index, value ->
-            val barHeight = if (maxValue > 0) (value / maxValue) * maxBarHeight else 0f
-            val x = index * (barWidth + barSpacing) + barSpacing / 2
-            val y = size.height - barHeight
-
-            drawRect(
-                color = primaryColor,
-                topLeft = Offset(x, y),
-                size = Size(barWidth, barHeight)
+@Composable
+fun MetricChip(
+    label: String,
+    value: String,
+    color: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        color = color.copy(alpha = 0.1f),
+        shape = MaterialTheme.shapes.small,
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            if (value.isNotEmpty()) {
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = color
+                )
+            }
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = color.copy(alpha = 0.8f)
             )
         }
     }

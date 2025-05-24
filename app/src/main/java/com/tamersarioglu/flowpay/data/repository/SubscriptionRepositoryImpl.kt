@@ -20,6 +20,7 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
+import kotlin.random.Random
 
 class SubscriptionRepositoryImpl @Inject constructor(
     private val subscriptionDao: SubscriptionDao,
@@ -90,8 +91,6 @@ class SubscriptionRepositoryImpl @Inject constructor(
         )
     }
 
-
-
     override suspend fun getSpendingByTimePeriod(timePeriod: TimePeriod): List<SpendingPeriodData> {
         val data = when (timePeriod) {
             TimePeriod.DAY -> paymentHistoryDao.getDailySpendingHistory()
@@ -106,14 +105,7 @@ class SubscriptionRepositoryImpl @Inject constructor(
             TimePeriod.YEAR -> paymentHistoryDao.getYearlySpendingHistory()
         }
         
-        val spendingData = data.map { SpendingPeriodData(it.month, it.total, 0) }
-        
-        // If no data exists, generate sample data for demo purposes
-        return if (spendingData.isEmpty()) {
-            generateSampleData(timePeriod)
-        } else {
-            spendingData
-        }
+        return data.map { SpendingPeriodData(it.month, it.total, 0) }
     }
 
     private fun groupDataByHalfYear(monthlyData: List<MonthlySpendingResult>): List<MonthlySpendingResult> {
@@ -127,79 +119,6 @@ class SubscriptionRepositoryImpl @Inject constructor(
         }
     }
 
-    private fun generateSampleData(timePeriod: TimePeriod): List<SpendingPeriodData> {
-        return when (timePeriod) {
-            TimePeriod.DAY -> {
-                (0..29).map { dayOffset ->
-                    val date = LocalDate.now().minusDays(dayOffset.toLong())
-                    val amount = (15..85).random().toDouble()
-                    SpendingPeriodData(
-                        period = date.toString(),
-                        totalAmount = amount,
-                        subscriptionCount = (1..3).random()
-                    )
-                }.reversed()
-            }
-            TimePeriod.WEEK -> {
-                (0..11).map { weekOffset ->
-                    val date = LocalDate.now().minusWeeks(weekOffset.toLong())
-                    val amount = (120..350).random().toDouble()
-                    SpendingPeriodData(
-                        period = "${date.year}-W${date.dayOfYear / 7 + 1}",
-                        totalAmount = amount,
-                        subscriptionCount = (3..8).random()
-                    )
-                }.reversed()
-            }
-            TimePeriod.MONTH -> {
-                (0..11).map { monthOffset ->
-                    val date = LocalDate.now().minusMonths(monthOffset.toLong())
-                    val amount = (150..450).random().toDouble()
-                    SpendingPeriodData(
-                        period = "${date.year}-${String.format("%02d", date.monthValue)}",
-                        totalAmount = amount,
-                        subscriptionCount = (5..12).random()
-                    )
-                }.reversed()
-            }
-            TimePeriod.QUARTER -> {
-                (0..7).map { quarterOffset ->
-                    val date = LocalDate.now().minusMonths((quarterOffset * 3).toLong())
-                    val quarter = ((date.monthValue - 1) / 3) + 1
-                    val amount = (450..1200).random().toDouble()
-                    SpendingPeriodData(
-                        period = "${date.year}-Q$quarter",
-                        totalAmount = amount,
-                        subscriptionCount = (8..15).random()
-                    )
-                }.reversed()
-            }
-            TimePeriod.HALF_YEAR -> {
-                (0..3).map { halfYearOffset ->
-                    val date = LocalDate.now().minusMonths((halfYearOffset * 6).toLong())
-                    val halfYear = if (date.monthValue <= 6) "H1" else "H2"
-                    val amount = (900..2400).random().toDouble()
-                    SpendingPeriodData(
-                        period = "${date.year}-$halfYear",
-                        totalAmount = amount,
-                        subscriptionCount = (10..20).random()
-                    )
-                }.reversed()
-            }
-            TimePeriod.YEAR -> {
-                (0..4).map { yearOffset ->
-                    val year = LocalDate.now().year - yearOffset
-                    val amount = (1800..4800).random().toDouble()
-                    SpendingPeriodData(
-                        period = year.toString(),
-                        totalAmount = amount,
-                        subscriptionCount = (15..25).random()
-                    )
-                }.reversed()
-            }
-        }
-    }
-
     private fun calculateSpendingTrend(monthlyData: List<MonthlySpendingResult>): SpendingTrend {
         if (monthlyData.size < 3) return SpendingTrend.STABLE
 
@@ -210,6 +129,40 @@ class SubscriptionRepositoryImpl @Inject constructor(
             trend > 50 -> SpendingTrend.INCREASING
             trend < -50 -> SpendingTrend.DECREASING
             else -> SpendingTrend.STABLE
+        }
+    }
+
+    // Function to clear payment history for testing
+    suspend fun clearPaymentHistory() {
+        paymentHistoryDao.clearAllPaymentHistory()
+    }
+
+    // Function to generate random payment history for testing
+    suspend fun generateRandomPaymentHistory() {
+        val testPayments = mutableListOf<com.tamersarioglu.flowpay.data.database.paymenthistory.PaymentHistory>()
+        
+        // Common subscription amounts for more realistic data
+        val subscriptionAmounts = listOf(9.99, 12.99, 14.99, 19.99, 29.99, 39.99, 49.99, 79.99, 99.99, 129.99)
+        
+        // Create payments for the last 12 months
+        repeat(12) { monthOffset ->
+            val baseDate = LocalDate.now().minusMonths(monthOffset.toLong())
+            val paymentsInMonth = Random.nextInt(4, 10) // 4-9 payments per month
+            
+            repeat(paymentsInMonth) {
+                testPayments.add(
+                    com.tamersarioglu.flowpay.data.database.paymenthistory.PaymentHistory(
+                        subscriptionId = "subscription-${Random.nextInt(1, 8)}",
+                        amount = subscriptionAmounts.random(),
+                        paymentDate = baseDate.minusDays(Random.nextInt(0, 28).toLong()),
+                        currency = "USD"
+                    )
+                )
+            }
+        }
+        
+        testPayments.forEach { payment ->
+            paymentHistoryDao.insertPayment(payment)
         }
     }
 }

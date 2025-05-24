@@ -24,6 +24,8 @@ class AnalyticsViewModel @Inject constructor(
 
     init {
         loadAnalytics()
+        // Also load spending data immediately
+        loadSpendingData(TimePeriod.MONTH)
     }
 
     fun loadAnalytics() {
@@ -49,6 +51,36 @@ class AnalyticsViewModel @Inject constructor(
     fun updateSelectedTimePeriod(timePeriod: TimePeriod) {
         _uiState.value = _uiState.value.copy(selectedTimePeriod = timePeriod)
         loadSpendingData(timePeriod)
+    }
+
+    // Temporary function for clearing payment history (remove in production)
+    fun clearPaymentHistory() {
+        viewModelScope.launch {
+            try {
+                (repository as? com.tamersarioglu.flowpay.data.repository.SubscriptionRepositoryImpl)?.clearPaymentHistory()
+                // Reload data after clearing
+                loadAnalytics()
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = "Failed to clear payment history: ${e.message}"
+                )
+            }
+        }
+    }
+
+    // Temporary function for generating random payment history (remove in production)
+    fun generateRandomPaymentHistory() {
+        viewModelScope.launch {
+            try {
+                (repository as? com.tamersarioglu.flowpay.data.repository.SubscriptionRepositoryImpl)?.generateRandomPaymentHistory()
+                // Reload data after generating
+                loadAnalytics()
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = "Failed to generate payment history: ${e.message}"
+                )
+            }
+        }
     }
 
     private fun loadSpendingData(timePeriod: TimePeriod) {

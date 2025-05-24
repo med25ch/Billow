@@ -30,6 +30,10 @@ interface PaymentHistoryDao {
     // Yearly spending
     @Query("SELECT strftime('%Y', paymentDate) as month, SUM(amount) as total FROM payment_history GROUP BY month ORDER BY month DESC LIMIT 5")
     suspend fun getYearlySpendingHistory(): List<MonthlySpendingResult>
+
+    // Clear all payment history
+    @Query("DELETE FROM payment_history")
+    suspend fun clearAllPaymentHistory()
 }
 
 data class MonthlySpendingResult(
