@@ -1,5 +1,6 @@
 package com.tamersarioglu.flowpay.presentation.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tamersarioglu.flowpay.domain.model.AnalyticsData
@@ -11,11 +12,15 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
+import kotlin.coroutines.ContinuationInterceptor
 
 @HiltViewModel
 class AnalyticsViewModel @Inject constructor(
@@ -33,7 +38,13 @@ class AnalyticsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 _uiState.value = AnalyticsUiState.Loading
-                val analyticsData = getAnalyticsUseCase()
+
+                // Small freeze detected on UI
+                // Shift the heavy work to IO dispatcher
+                val analyticsData = withContext(Dispatchers.IO) {
+                    getAnalyticsUseCase()
+                }
+
                 _uiState.value = AnalyticsUiState.Success(
                     analyticsData = analyticsData,
                     selectedTimePeriod = TimePeriod.MONTH,
@@ -94,13 +105,19 @@ class AnalyticsViewModel @Inject constructor(
                 val currentState = _uiState.value
                 if (currentState is AnalyticsUiState.Success) {
                     _uiState.value = currentState.copy(isLoadingSpendingData = true)
-                    val spendingData = repository.getSpendingByTimePeriod(timePeriod)
+
+                    // Shift the heavy work to IO dispatcher
+                    val spendingData = withContext(Dispatchers.IO) {
+                        repository.getSpendingByTimePeriod(timePeriod)
+                    }
+
                     _uiState.value = currentState.copy(
                         spendingData = spendingData.toPersistentList(),
                         isLoadingSpendingData = false
                     )
                 }
             } catch (e: Exception) {
+
                 _uiState.value = AnalyticsUiState.Error(
                     message = e.message ?: "Failed to load spending data"
                 )

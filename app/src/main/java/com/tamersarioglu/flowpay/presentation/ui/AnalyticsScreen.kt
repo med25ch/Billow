@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -49,6 +50,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -190,10 +192,7 @@ fun OverviewCards(
                 gradientColors = listOf(
                     MaterialTheme.colorScheme.primary,
                     MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
-                ),
-                modifier = Modifier
-                    .width(180.dp)
-                    .height(140.dp)
+                )
             )
         }
         item {
@@ -204,10 +203,7 @@ fun OverviewCards(
                 gradientColors = listOf(
                     MaterialTheme.colorScheme.secondary,
                     MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f)
-                ),
-                modifier = Modifier
-                    .width(180.dp)
-                    .height(140.dp)
+                )
             )
         }
         item {
@@ -218,10 +214,7 @@ fun OverviewCards(
                 gradientColors = listOf(
                     MaterialTheme.colorScheme.tertiary,
                     MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f)
-                ),
-                modifier = Modifier
-                    .width(180.dp)
-                    .height(140.dp)
+                )
             )
         }
     }
@@ -243,20 +236,18 @@ fun EnhancedMetricCard(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         )
     ) {
-        Box(
-            modifier = Modifier.fillMaxSize()
-        ) {
+        Box{
             // Background gradient effect
             Surface(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .wrapContentSize()
                     .padding(2.dp),
                 color = gradientColors.first().copy(alpha = 0.1f),
                 shape = MaterialTheme.shapes.medium
             ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxSize()
+                        .wrapContentSize()
                         .padding(20.dp),
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -958,4 +949,19 @@ fun ErrorState(
             Text("Try Again")
         }
     }
+}
+
+@Preview
+@Composable
+fun EnhancedMetricCardPreview(){
+    EnhancedMetricCard(
+        title = "Yearly Spend",
+        value = "$$9.99",
+        icon = Icons.Default.CalendarToday,
+        gradientColors = listOf(
+            MaterialTheme.colorScheme.secondary,
+            MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f)
+        ),
+        modifier = Modifier.wrapContentSize()
+    )
 }
