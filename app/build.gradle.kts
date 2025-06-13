@@ -97,4 +97,7 @@ dependencies {
 
     // Immutable Collections
     implementation(libs.kotlinx.collections.immutable)
+
+    // Compose Foundation
+    implementation(libs.compose.foundation)
 }
