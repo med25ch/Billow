@@ -19,6 +19,7 @@ work = "2.10.1"
 datastore = "1.1.7"
 kotlinxDatetime = "0.6.2"
 vico = "2.1.2"
+compose-foundation = "1.8.2"
 
 
 [libraries]
@@ -55,6 +56,7 @@ kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime",
 vico-compose = { group = "com.patrykandpatrick.vico", name = "compose", version.ref = "vico" }
 vico-compose-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico" }
 vico-core = { group = "com.patrykandpatrick.vico", name = "core", version.ref = "vico" }
+compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "compose-foundation" }
 
 
 
