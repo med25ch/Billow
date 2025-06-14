@@ -8,11 +8,9 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,23 +29,16 @@ import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Subscriptions
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -63,7 +54,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -147,7 +137,9 @@ fun SubscriptionListScreen(
                 totalMonthlySpend = currentState.totalMonthlySpend,
                 onNavigateToAddSubscription = onNavigateToAddSubscription,
                 onNavigateToEditSubscription = onNavigateToEditSubscription,
-                onDeleteSubscription = viewModel::deleteSubscription
+                onDeleteSubscription = viewModel::deleteSubscription,
+                onApplyFilters = viewModel::updateFilterOptions,
+                onResetFilters = viewModel::resetFilters
             )
         }
 
@@ -196,7 +188,9 @@ private fun SubscriptionListContent(
     totalMonthlySpend: Double,
     onNavigateToAddSubscription: () -> Unit,
     onNavigateToEditSubscription: (String) -> Unit,
-    onDeleteSubscription: (Subscription) -> Unit
+    onDeleteSubscription: (Subscription) -> Unit,
+    onApplyFilters : (SubscriptionListViewModel.FilterOptions) -> Unit,
+    onResetFilters : () -> Unit
 ) {
 
 
@@ -207,6 +201,7 @@ private fun SubscriptionListContent(
     var priceRange by remember { mutableStateOf(10f..100f) }
     var billing by remember { mutableStateOf("Monthly") }
     var categories by remember { mutableStateOf(setOf<String>()) }
+    var query by remember { mutableStateOf("") }
 
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -215,9 +210,6 @@ private fun SubscriptionListContent(
             .fillMaxSize()
             .padding(horizontal = 16.dp)
     ) {
-
-
-        var query by remember { mutableStateOf("") }
 
         SearchBarWithExternalFilter(
             query = query,
@@ -286,8 +278,17 @@ private fun SubscriptionListContent(
                         onCategoryToggle = { cat ->
                             categories = if (cat in categories) categories - cat else categories + cat
                         },
-                        onApply = {},
-                        onClearAll = {}
+                        onApply = {
+
+                            val newOptions = SubscriptionListViewModel.FilterOptions(
+                                priceRange = priceRange,
+                                billing = billing,
+                                categories = categories,
+                            )
+
+                            onApplyFilters(newOptions)
+                        },
+                        onClearAll = onResetFilters
                     )
                 }
             }
@@ -640,6 +641,8 @@ fun PreviewSubscriptionListContent(){
             onDeleteSubscription = {},
             onNavigateToAddSubscription = {},
             onNavigateToEditSubscription = {},
+            onApplyFilters = {},
+            onResetFilters = {}
         )
     }
     }

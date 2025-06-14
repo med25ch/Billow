@@ -2,6 +2,7 @@ package com.tamersarioglu.flowpay.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tamersarioglu.flowpay.data.database.BillingInterval
 import com.tamersarioglu.flowpay.data.database.subcription.Subscription
 import com.tamersarioglu.flowpay.domain.repository.SubscriptionRepository
 import com.tamersarioglu.flowpay.domain.usecase.GetActiveSubscriptionsUseCase
@@ -22,6 +23,14 @@ class SubscriptionListViewModel @Inject constructor(
     private val repository: SubscriptionRepository
 ) : ViewModel() {
 
+    // List of all fetched subscriptions
+    private lateinit var allSubscriptions: List<Subscription>
+
+    // filter options
+    private val filterOptions = MutableStateFlow(FilterOptions())
+
+
+
     private val _uiState = MutableStateFlow<SubscriptionListUiState>(SubscriptionListUiState.Loading)
     val uiState: StateFlow<SubscriptionListUiState> = _uiState.asStateFlow()
 
@@ -38,6 +47,7 @@ class SubscriptionListViewModel @Inject constructor(
                     )
                 }
                 .collect { subscriptions ->
+                    allSubscriptions = subscriptions
                     _uiState.value = SubscriptionListUiState.Success(
                         subscriptions = subscriptions.toPersistentList(),
                         totalMonthlySpend = calculateTotalMonthlySpend(subscriptions)
@@ -64,6 +74,45 @@ class SubscriptionListViewModel @Inject constructor(
         }
     }
 
+    fun updateFilterOptions(newOptions: FilterOptions){
+        filterOptions.value = newOptions
+        applyFilters()
+    }
+
+    fun resetFilters() {
+        filterOptions.value = FilterOptions() // Reset to default values
+        applyFilters() // Re-apply filters to show full list
+    }
+
+    private fun applyFilters() {
+        viewModelScope.launch {
+            _uiState.value = SubscriptionListUiState.Loading
+
+            val filters = filterOptions.value
+
+            val filteredSubscriptions = allSubscriptions.filter { subscription ->
+                val matchesPrice = subscription.price in filters.priceRange
+
+                val matchesBilling = filters.billing?.let {
+                    subscription.billingInterval.displayName == it
+                } ?: true // No filter applied if null
+
+                val matchesCategory = if (filters.categories.isNotEmpty()) {
+                    subscription.category.displayName in filters.categories
+                } else true
+
+                val matchesSearch = subscription.name.contains(filters.searchQuery, ignoreCase = true)
+
+                matchesPrice && matchesBilling && matchesCategory && matchesSearch
+            }
+
+            _uiState.value = SubscriptionListUiState.Success(
+                subscriptions = filteredSubscriptions.toPersistentList(),
+                totalMonthlySpend = calculateTotalMonthlySpend(filteredSubscriptions)
+            )
+        }
+    }
+
     sealed interface SubscriptionListUiState {
         data object Loading : SubscriptionListUiState
         
@@ -76,4 +125,14 @@ class SubscriptionListViewModel @Inject constructor(
             val message: String
         ) : SubscriptionListUiState
     }
+
+    // Hold current selected filters
+    data class FilterOptions(
+        val priceRange: ClosedFloatingPointRange<Float> = 0f..1000f,
+        val billing: String? = null,
+        val categories: Set<String> = emptySet(),
+        val searchQuery: String = ""
+    )
+
+
 }
