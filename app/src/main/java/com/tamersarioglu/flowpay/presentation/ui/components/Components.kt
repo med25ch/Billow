@@ -67,7 +67,7 @@ fun SubscriptionFilterSheet(
     onApply: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val billingOptions = listOf("Weekly", "Monthly", "Quarterly", "Yearly")
+    val billingOptions = listOf("Weekly", "Monthly", "Quarterly", "Yearly","Custom")
     val categoryOptions = listOf(
         "Entertainment", "Productivity", "Health & Fitness",
         "Education", "Utilities", "Shopping", "Other"
