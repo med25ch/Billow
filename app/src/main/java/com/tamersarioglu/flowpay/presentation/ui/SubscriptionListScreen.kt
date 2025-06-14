@@ -44,9 +44,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -77,6 +79,8 @@ import com.tamersarioglu.flowpay.presentation.ui.components.CategoryIndicator
 import com.tamersarioglu.flowpay.presentation.ui.components.EmptyStateCard
 import com.tamersarioglu.flowpay.presentation.ui.components.LoadingCard
 import com.tamersarioglu.flowpay.presentation.ui.components.MetricCard
+import com.tamersarioglu.flowpay.presentation.ui.components.SearchBarWithExternalFilter
+import com.tamersarioglu.flowpay.presentation.ui.components.SubscriptionFilterSheet
 import com.tamersarioglu.flowpay.presentation.ui.theme.FlowPayTheme
 import com.tamersarioglu.flowpay.presentation.viewmodel.SubscriptionListViewModel
 import kotlinx.collections.immutable.PersistentList
@@ -185,6 +189,7 @@ fun SubscriptionListScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SubscriptionListContent(
     subscriptions: PersistentList<Subscription>,
@@ -193,12 +198,35 @@ private fun SubscriptionListContent(
     onNavigateToEditSubscription: (String) -> Unit,
     onDeleteSubscription: (Subscription) -> Unit
 ) {
+
+
+    val sheetState = rememberModalBottomSheetState()
+    val scope = rememberCoroutineScope()
+    var showBottomSheet by remember { mutableStateOf(false) }
+
+    var priceRange by remember { mutableStateOf(10f..100f) }
+    var billing by remember { mutableStateOf("Monthly") }
+    var categories by remember { mutableStateOf(setOf<String>()) }
+
+
     Box(modifier = Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp)
     ) {
+
+
+        var query by remember { mutableStateOf("") }
+
+        SearchBarWithExternalFilter(
+            query = query,
+            onQueryChange = { query = it },
+            onFilterClick = { showBottomSheet = true }
+        )
+
+
+
         // Header with total spending
         MetricCard(
             title = "Monthly Spending",
@@ -240,8 +268,32 @@ private fun SubscriptionListContent(
         ) {
             Icon(Icons.Default.Add, contentDescription = "Add")
         }
-    }
+
+
+        if (showBottomSheet) {
+            ModalBottomSheet(
+                onDismissRequest = {
+                    showBottomSheet = false
+                },
+                sheetState = sheetState
+            ) {
+                    SubscriptionFilterSheet(
+                        priceRange = priceRange,
+                        onPriceChange = { priceRange = it },
+                        selectedBilling = billing,
+                        onBillingChange = { billing = it },
+                        selectedCategories = categories,
+                        onCategoryToggle = { cat ->
+                            categories = if (cat in categories) categories - cat else categories + cat
+                        },
+                        onApply = {},
+                        onClearAll = {}
+                    )
+                }
+            }
+        }
 }
+
 
 @Composable
 fun SubscriptionList(
