@@ -8,6 +8,7 @@ import com.tamersarioglu.flowpay.data.database.subcription.Subscription
 import com.tamersarioglu.flowpay.data.database.subcription.SubscriptionCategory
 import com.tamersarioglu.flowpay.domain.repository.SubscriptionRepository
 import com.tamersarioglu.flowpay.domain.usecase.AddSubscriptionUseCase
+import com.tamersarioglu.flowpay.domain.util.BillingCalculator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -116,7 +117,11 @@ class AddEditSubscriptionViewModel @Inject constructor(
 
                 subscription?.let {
                     if (state.isEditMode) {
-                        repository.updateSubscription(it)
+                        //Calculate the next billing date
+                        val subscriptionWithNextBilling = it.copy(
+                            nextBillingDate = BillingCalculator.calculateNextBillingDate(it, it.startDate)
+                        )
+                        repository.updateSubscription(subscriptionWithNextBilling)
                     } else {
                         addSubscriptionUseCase(it)
                     }
