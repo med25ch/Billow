@@ -29,6 +29,10 @@ import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Subscriptions
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -39,8 +43,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -302,6 +308,10 @@ fun SubscriptionList(
     onNavigateToEditSubscription: (String) -> Unit,
     onDeleteSubscription: (Subscription) -> Unit
 ) {
+
+    var subscriptionToConfirm by remember { mutableStateOf<Subscription?>(null) }
+    var resetTrigger by remember { mutableStateOf<Pair<String, Int>?>(null) }
+
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         contentPadding = PaddingValues(bottom = 16.dp)
@@ -311,25 +321,80 @@ fun SubscriptionList(
             key = { it.id }
         ) { subscription ->
             SwipeToDeleteItem(
-                onDelete = { onDeleteSubscription(subscription) }
+                onSwipeConfirmed  = { subscriptionToConfirm = subscription },
+                resetSwipeTrigger = resetTrigger,
+                itemId = subscription.id
             ) {
                 ModernSubscriptionCard(
                     subscription = subscription,
                     onEdit = { onNavigateToEditSubscription(subscription.id) },
-                    onDelete = { onDeleteSubscription(subscription) },
                     modifier = Modifier.fillMaxWidth()
                 )
             }
         }
     }
+
+
+    subscriptionToConfirm?.let { sub ->
+
+    AlertDialog(
+            onDismissRequest = {
+                resetTrigger = sub.id to (resetTrigger?.second?.plus(1) ?: 0)
+                subscriptionToConfirm = null
+            },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = {
+                Text(
+                    "Delete Subscription",
+                    style = MaterialTheme.typography.headlineSmall
+                )
+            },
+            text = {
+                Text(
+                    "Are you sure you want to delete subscription ? This action cannot be undone.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeleteSubscription(sub)
+                        subscriptionToConfirm = null
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    resetTrigger = sub.id to (resetTrigger?.second?.plus(1) ?: 0)
+                    subscriptionToConfirm = null
+                }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
 }
 
 
 @Composable
 fun SwipeToDeleteItem(
-    onDelete: () -> Unit,
-    threshold: Float = 300f,
+    onSwipeConfirmed: () -> Unit, // called when swipe threshold is passed
+    resetSwipeTrigger: Pair<String, Int>? = null,
+    itemId: String,
     shape: Shape = RoundedCornerShape(12.dp),
+    threshold: Float = 300f,
     content: @Composable () -> Unit
 ) {
     val offsetX = remember { Animatable(0f) }
@@ -337,18 +402,25 @@ fun SwipeToDeleteItem(
     val haptic = LocalHapticFeedback.current
     val isSwipingLeft = offsetX.value < 0
 
+    // 🔁 External reset logic
+    LaunchedEffect(resetSwipeTrigger) {
+        if (resetSwipeTrigger?.first == itemId) {
+            offsetX.animateTo(0f, tween(300))
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .wrapContentHeight() // no clipping here!
+            .wrapContentHeight()
     ) {
-        // 🔴 Background with clipped shape (gradient + icon)
+        // Background
         Box(
             modifier = Modifier
                 .matchParentSize()
-                .clip(shape) // Clip only the background
+                .clip(shape)
                 .background(
-                    brush = Brush.horizontalGradient(
+                    Brush.horizontalGradient(
                         colors = listOf(
                             Color.Red.copy(alpha = 0.8f),
                             Color.Red.copy(alpha = 0.4f)
@@ -369,7 +441,7 @@ fun SwipeToDeleteItem(
             )
         }
 
-        // ⬅️ Foreground swipable content (Card retains shadow)
+        // Foreground content
         Box(
             modifier = Modifier
                 .offset { IntOffset(offsetX.value.roundToInt(), 0) }
@@ -378,13 +450,7 @@ fun SwipeToDeleteItem(
                         onDragEnd = {
                             if (kotlin.math.abs(offsetX.value) > threshold) {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                scope.launch {
-                                    offsetX.animateTo(
-                                        targetValue = if (offsetX.value > 0) 1000f else -1000f,
-                                        animationSpec = tween(durationMillis = 300)
-                                    )
-                                    onDelete()
-                                }
+                                onSwipeConfirmed() // Delegate confirmation to parent
                             } else {
                                 scope.launch {
                                     offsetX.animateTo(0f, tween(300))
@@ -399,10 +465,11 @@ fun SwipeToDeleteItem(
                     )
                 }
         ) {
-            content() // Your ElevatedCard stays untouched — keeps shadow!
+            content()
         }
     }
 }
+
 
 
 
@@ -411,10 +478,9 @@ fun SwipeToDeleteItem(
 fun ModernSubscriptionCard(
     subscription: Subscription,
     onEdit: () -> Unit,
-    onDelete: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
-//    var showDeleteDialog by remember { mutableStateOf(false) }
+
 
     ElevatedCard(
         modifier = modifier.fillMaxWidth(),
@@ -505,49 +571,6 @@ fun ModernSubscriptionCard(
         }
 
     }
-
-//    if (showDeleteDialog) {
-//        AlertDialog(
-//            onDismissRequest = { showDeleteDialog = false },
-//            icon = {
-//                Icon(
-//                    imageVector = Icons.Default.Warning,
-//                    contentDescription = null,
-//                    tint = MaterialTheme.colorScheme.error
-//                )
-//            },
-//            title = {
-//                Text(
-//                    "Delete Subscription",
-//                    style = MaterialTheme.typography.headlineSmall
-//                )
-//            },
-//            text = {
-//                Text(
-//                    "Are you sure you want to delete ${subscription.name}? This action cannot be undone.",
-//                    style = MaterialTheme.typography.bodyMedium
-//                )
-//            },
-//            confirmButton = {
-//                Button(
-//                    onClick = {
-//                        onDelete()
-//                        showDeleteDialog = false
-//                    },
-//                    colors = ButtonDefaults.buttonColors(
-//                        containerColor = MaterialTheme.colorScheme.error
-//                    )
-//                ) {
-//                    Text("Delete")
-//                }
-//            },
-//            dismissButton = {
-//                TextButton(onClick = { showDeleteDialog = false }) {
-//                    Text("Cancel")
-//                }
-//            }
-//        )
-//    }
 }
 
 
