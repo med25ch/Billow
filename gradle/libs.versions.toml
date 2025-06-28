@@ -2,7 +2,6 @@
 agp = "8.10.0"
 kotlin = "2.1.21"
 coreKtx = "1.16.0"
-junit = "4.13.2"
 junitVersion = "1.2.1"
 espressoCore = "3.6.1"
 kotlinxCollectionsImmutable = "0.4.0"
@@ -20,6 +19,11 @@ datastore = "1.1.7"
 kotlinxDatetime = "0.6.2"
 vico = "2.1.2"
 compose-foundation = "1.8.2"
+junit = "4.13.2"
+androidx-test-core = "1.5.0"
+mockito = "5.2.0"
+mockito-kotlin = "4.1.0"
+mockk = "1.13.5"
 
 
 [libraries]
@@ -30,7 +34,6 @@ hilt-android-compiler = { group = "com.google.dagger", name = "hilt-android-comp
 androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltExt" }
 androidx-hilt-work = { group = "androidx.hilt", name = "hilt-work", version.ref = "hiltExt" }
 androidx-hilt-compiler = { group = "androidx.hilt", name = "hilt-compiler", version.ref = "hiltExt" }
-junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
@@ -57,6 +60,12 @@ vico-compose = { group = "com.patrykandpatrick.vico", name = "compose", version.
 vico-compose-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico" }
 vico-core = { group = "com.patrykandpatrick.vico", name = "core", version.ref = "vico" }
 compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "compose-foundation" }
+
+junit = { module = "junit:junit", version.ref = "junit" }
+androidx-test-core = { module = "androidx.test:core", version.ref = "androidx-test-core" }
+mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
+mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockito-kotlin" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 
 
 
