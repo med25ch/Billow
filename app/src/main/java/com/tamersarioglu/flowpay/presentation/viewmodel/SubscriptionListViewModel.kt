@@ -2,7 +2,6 @@ package com.tamersarioglu.flowpay.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.tamersarioglu.flowpay.data.database.BillingInterval
 import com.tamersarioglu.flowpay.data.database.subcription.Subscription
 import com.tamersarioglu.flowpay.domain.repository.SubscriptionRepository
 import com.tamersarioglu.flowpay.domain.usecase.GetActiveSubscriptionsUseCase
@@ -28,7 +27,6 @@ class SubscriptionListViewModel @Inject constructor(
 
     // filter options
     private val filterOptions = MutableStateFlow(FilterOptions())
-
 
 
     private val _uiState = MutableStateFlow<SubscriptionListUiState>(SubscriptionListUiState.Loading)

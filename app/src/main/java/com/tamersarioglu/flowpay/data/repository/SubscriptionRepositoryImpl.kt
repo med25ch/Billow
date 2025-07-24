@@ -1,6 +1,7 @@
 package com.tamersarioglu.flowpay.data.repository
 
 import com.tamersarioglu.flowpay.data.database.paymenthistory.MonthlySpendingResult
+import com.tamersarioglu.flowpay.data.database.paymenthistory.PaymentHistory
 import com.tamersarioglu.flowpay.data.database.paymenthistory.PaymentHistoryDao
 import com.tamersarioglu.flowpay.data.database.subcription.Subscription
 import com.tamersarioglu.flowpay.data.database.subcription.SubscriptionCategory
@@ -140,7 +141,7 @@ class SubscriptionRepositoryImpl @Inject constructor(
 
     // Function to generate random payment history for testing
     suspend fun generateRandomPaymentHistory() {
-        val testPayments = mutableListOf<com.tamersarioglu.flowpay.data.database.paymenthistory.PaymentHistory>()
+        val testPayments = mutableListOf<PaymentHistory>()
         
         // Common subscription amounts for more realistic data
         val subscriptionAmounts = listOf(9.99, 12.99, 14.99, 19.99, 29.99, 39.99, 49.99, 79.99, 99.99, 129.99)
@@ -152,7 +153,7 @@ class SubscriptionRepositoryImpl @Inject constructor(
             
             repeat(paymentsInMonth) {
                 testPayments.add(
-                    com.tamersarioglu.flowpay.data.database.paymenthistory.PaymentHistory(
+                    PaymentHistory(
                         subscriptionId = "subscription-${Random.nextInt(1, 8)}",
                         amount = subscriptionAmounts.random(),
                         paymentDate = baseDate.minusDays(Random.nextInt(0, 28).toLong()),
